@@ -1,0 +1,12 @@
+# python bytecode cache
+*.pyc
+__pycache__
+oopygame/__pycache__
+
+# ghostwriter md editor backups
+*.backup
+
+# linter/type-checker cache
+.pylint_cache
+.ruff_cache
+.mypy_cache
