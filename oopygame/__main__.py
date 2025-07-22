@@ -2,8 +2,13 @@
 
 import pygame
 import argparse
+import sys
 
 pygame.init()
+
+game_name = sys.argv[-1]
+game_mod = __import__(game_name)
+game_obj = getattr(game_mod, game_mod.__game__)
 
 if __name__ == '__main__':
     try:
