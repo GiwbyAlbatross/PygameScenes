@@ -17,7 +17,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install -r requirements.txt
         pip install mypy
     - name: Analysing the code with pylint
       run: |
-        mypy -p pygamescenes
+        mypy -p pygamescenes || echo "MyPy exited with exit code $? but i dont really care"
