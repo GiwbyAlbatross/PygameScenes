@@ -1,13 +1,14 @@
 from __future__ import annotations
 import abc
+from typing import 
 import pygame
 from . import game
 
 class AbstractScene(game.BaseGame, metaclass=abc.ABCMeta):
     @abc.abstractproperty
     def scene_over(self) -> bool:
-        return False
-    @abc.abstractproperty
+        return not self.running
+    @abc.abstractmethod
     def cleanup(self) -> int:
         return 0
 
@@ -25,9 +26,10 @@ class BaseSceneRunnerGame(game.AbstractGame):
     def cleanup(self) -> int:
         self.current_scene.cleanup()
         pygame.quit()
+        return 0
 class SingleSceneRunnerGame(BaseSceneRunnerGame):
     def __init__(self,
-                 scr_size: tuple[int,int]=(256,256),
+                 scr_size: tuple[int,int],
                  scene: AbstractScene,
                  dpy_flags: int=0, *,
                  open_window: bool=False,
@@ -51,7 +53,7 @@ class LinearSceneRunnerGame(BaseSceneRunnerGame):
     scenes: list[AbstractScene]
     i: int
     def __init__(self,
-                 scr_size: tuple[int,int]=(256,256),
+                 scr_size: tuple[int,int],
                  scenes: list[AbstractScene],
                  dpy_flags: int=0, *,
                  open_window: bool=False,

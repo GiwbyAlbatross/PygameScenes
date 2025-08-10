@@ -1,6 +1,7 @@
 from __future__ import annotations
 import abc
-from typing import Optional
+from typing import Optional, Callable
+from functools import wraps
 import pygame
 from . import constants as _constants
 
@@ -12,6 +13,9 @@ class AbstractGame(abc.ABC):
     entities: pygame.sprite.Group
     running: bool # is game running
     time: float # game running time
+    TICK_EVENT: int = pygame.USEREVENT
+    TICK_RATE:  int = 1000//20 # 20 ticks per second, in milliseconds
+    _eventhandlers: dict[str, set[Callable]]
     
     def __init__(self,
                  scr_size: tuple[int,int]=(256,256),
@@ -29,6 +33,8 @@ class AbstractGame(abc.ABC):
             self.scr_size = self.scr.size
         else:
             self.scr_is_real = False
+        self.registerhandler(self.TICK_EVENT, self.update_tick)
+        pygame.time.set_timer(self.TICK_EVENT, self.TICK_RATE)
     
     @abc.abstractmethod
     def init(self, *args, **kwargs) -> None:
@@ -56,6 +62,25 @@ class AbstractGame(abc.ABC):
     def cleanup(self) -> int:
         " clean up this game and return the return code "
         pygame.quit()
+    def default_event_handler(self, event: pygame.event.Event) -> None:
+        " default event handler, signature of an event handler, reports `event` to stdout "
+        print("Event:", repr(event), flush=True)
+    def registerhandler(self, event_id: int | _constants.EventIDs=_constants.EventIDs.KEYDOWN, handler: Callable=default_event_handler) -> None:
+        " register `handler` to respond to events with ID `event_id` "
+        if isinstance(event_id, _constants.EventIDs):
+            event_id = event_id.value
+        self._eventhandlers[event_id].add(handler)
+    def handler(self, event_id: int=_constants.EventIDs.KEYDOWN) -> Callable:
+        " clever decorator to register event handlers "
+        def _decorator(func: Callable) -> Callable:
+            self._eventhandlers[event_id].add(func)
+            return func
+        return _decorator
+    def process_events(self, events: list[pygame.event.Event]):
+        for event in events:
+            self.process_event(event)
+            for handler in self._eventhandlers.get(event.type, []):
+                handler(event)
     
     @property
     def scr_w(self) -> int:
@@ -75,7 +100,7 @@ class BaseGame(AbstractGame):
                  dpy_flags: int=0, *,
                  open_window: bool=False,
                  screen: Optional[pygame.Surface]=None) -> None:
-        super().__init__(scr_size, dpy_flags, open_window, screen)
+        super().__init__(scr_size, dpy_flags, open_window=open_window, screen=screen)
         self.backdrop = pygame.Surface(scr_size)
         self.rendered = pygame.sprite.Group()
         self.updated  = pygame.sprite.Group()
@@ -89,7 +114,7 @@ class BaseGame(AbstractGame):
     @abc.abstractmethod
     def update_frame(self, dt: float=1/60) -> None:
         for entity in self.ticked:
-            entity.update()
+            entity.update(dt)
     @abc.abstractmethod
     def update_tick(self) -> None:
         for entity in self.ticked:
